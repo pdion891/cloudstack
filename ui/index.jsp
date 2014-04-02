@@ -533,6 +533,16 @@
                                             <a href="6"><fmt:message key="label.edit"/></a>
                                         </div>
                                     </div>
+
+                                   <!-- userdata -->
+                                   <div class="select">
+                                       <div class="name">
+                                           <span><fmt:message key="label.add.userdata"/> (<fmt:message key="label.optional"/>)</span>
+                                       </div>
+                                       <div class="value">
+                                           <input type="text" name="userdata" class="disallowSpecialCharacters" />
+                                       </div>
+                                   </div>
                                 </div>
                             </div>
                         </div>
