@@ -1264,6 +1264,9 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
         String cidrAddress = getCidrAddress(cidr);
         int cidrSize = getCidrSize(cidr);
 
+        // Validate new pod settings
+        checkPodAttributes(-1, podName, zoneId, gateway, cidr, startIp, endIp, allocationStateStr, true, skipGatewayOverlapCheck);
+
         // endIp is an optional parameter; if not specified - default it to the
         // end ip of the pod's cidr
         if (startIp != null) {
@@ -1272,16 +1275,8 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
             }
         }
 
-        // Validate new pod settings
-        checkPodAttributes(-1, podName, zoneId, gateway, cidr, startIp, endIp, allocationStateStr, true, skipGatewayOverlapCheck);
-
         // Create the new pod in the database
-        String ipRange;
-        if (startIp != null) {
-            ipRange = startIp + "-" + endIp;
-        } else {
-            throw new InvalidParameterValueException("Start ip is required parameter");
-        }
+        String ipRange = startIp + "-" + endIp;
 
         final HostPodVO podFinal = new HostPodVO(podName, zoneId, gateway, cidrAddress, cidrSize, ipRange);
 
@@ -3473,10 +3468,13 @@ public class ConfigurationManagerImpl extends ManagerBase implements Configurati
             skipPod = podIdToBeSkipped;
         }
         HashMap<Long, List<Object>> currentPodCidrSubnets = _podDao.getCurrentPodCidrSubnets(dcId, skipPod);
+        if(currentPodCidrSubnets == null) {
+            throw new InvalidParameterValueException("There arent any CIDRs in the zone: "+dcId);
+        }
         List<Object> newCidrPair = new ArrayList<Object>();
         newCidrPair.add(0, getCidrAddress(cidr));
         newCidrPair.add(1, (long)getCidrSize(cidr));
-        currentPodCidrSubnets.put(new Long(-1), newCidrPair);
+        currentPodCidrSubnets.put((long) -1, newCidrPair);
 
         DataCenterVO dcVo = _zoneDao.findById(dcId);
         String guestNetworkCidr = dcVo.getGuestNetworkCidr();
