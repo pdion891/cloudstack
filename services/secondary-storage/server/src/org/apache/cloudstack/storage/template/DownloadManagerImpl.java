@@ -270,7 +270,7 @@ public class DownloadManagerImpl extends ManagerBase implements DownloadManager 
             threadPool.execute(td);
             break;
         case DOWNLOAD_FINISHED:
-            if (!(td instanceof S3TemplateDownloader)) {
+            //if (!(td instanceof S3TemplateDownloader)) {
                 // we currently only create template.properties for NFS by
                 // running some post download script
                 td.setDownloadError("Download success, starting install ");
@@ -283,7 +283,7 @@ public class DownloadManagerImpl extends ManagerBase implements DownloadManager 
                     td.setStatus(Status.POST_DOWNLOAD_FINISHED);
                     td.setDownloadError("Install completed successfully at " + new SimpleDateFormat().format(new Date()));
                 }
-            } else {
+            /*} else {
                 // for s3 and swift, we skip post download step and just set
                 // status to trigger callback.
                 td.setStatus(Status.POST_DOWNLOAD_FINISHED);
@@ -294,7 +294,7 @@ public class DownloadManagerImpl extends ManagerBase implements DownloadManager 
                 dnld.setTemplatesize(size);
                 dnld.setTemplatePhysicalSize(size);
                 dnld.setTmpltPath(std.getDownloadLocalPath()); // update template path to include file name.
-            }
+            } */
             dj.cleanup();
             break;
         default:
