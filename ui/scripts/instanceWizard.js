@@ -946,7 +946,11 @@
             	$.extend(deployVmData, {
             		keyboard : keyboard
             	});
-            }            
+            }
+
+            var userdata = args.data.userdata;
+            if (userdata != null && userdata.length > 0)
+                array1.push("&userdata=" + todb(btoa(userdata)));
 
             if (g_hostid != null) {
                 $.extend(deployVmData, {
