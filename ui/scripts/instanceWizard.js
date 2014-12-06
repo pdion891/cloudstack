@@ -946,7 +946,14 @@
             	$.extend(deployVmData, {
             		keyboard : keyboard
             	});
-            }            
+            }
+
+            var userdata = args.data.userdata;
+            if (userdata != null && userdata.length > 0) {  //when blank option (default option) is selected => args.data.keyboardLanguage == ""
+                $.extend(deployVmData, {
+                    userdata : userdata
+                });
+            }
 
             if (g_hostid != null) {
                 $.extend(deployVmData, {
