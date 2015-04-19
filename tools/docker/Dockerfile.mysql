@@ -1,0 +1,10 @@
+#FROM maven:3.2-jdk-7-onbuild
+#CMD mvn -Pdeveloper -Dsimulator -DskipTests clean install
+
+FROM mysql
+ENV MYSQL_ROOT_PASSWORD=password
+
+RUN mvn -Pdeveloper -pl developer -Ddeploydb; \
+    mvn -Pdeveloper -pl developer -Ddeploydb-simulator;
+
+

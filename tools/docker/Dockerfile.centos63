@@ -1,0 +1,31 @@
+FROM centos:6
+
+MAINTAINER "Apache CloudStack" <dev@cloudstack.apache.org>
+
+ENV REL=4.5
+ENV VERSION=4.5.1-SNAPSHOT
+ENV PKG_URL=http://jenkins.buildacloud.org/view/${REL}/job/package-rhel63-${REL}/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64
+
+RUN yum install -y \
+    ${PKG_URL}/cloudstack-common-${VERSION}.el6.x86_64.rpm \
+    ${PKG_URL}/cloudstack-awsapi-${VERSION}.el6.x86_64.rpm \
+    ${PKG_URL}/cloudstack-management-${VERSION}.el6.x86_64.rpm
+
+RUN cd /etc/cloudstack/management; \
+    ln -s tomcat6-nonssl.conf tomcat6.conf; \
+    ln -s server-nonssl.xml server.xml;
+
+COPY cloud.sudoer /etc/sudoers.d/cloud
+COPY init.sh /root/init.sh
+
+RUN yum clean all
+RUN touch /var/log/cloudstack/management/management-server.log; \
+    chown cloud:cloud /var/log/cloudstack/management/management-server.log
+
+EXPOSE 8080 8250 8096 45219 9090 8787
+# Troubleshooting ports: 
+#   8787: CloudStack (Tomcat) debug socket
+#   9090: Cloudstack Management Cluster Interface
+#   45219: JMX console
+
+CMD ["/root/init.sh"]

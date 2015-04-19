@@ -1,0 +1,29 @@
+FROM centos:7
+
+MAINTAINER "Apache CloudStack" <your@email.here>
+
+ENV PKG_URL=http://jenkins.buildacloud.org/job/package-centos7-master-noredist/lastSuccessfulBuild/artifact/dist/rpmbuild/RPMS/x86_64
+
+# systemd
+ENV container docker
+RUN yum -y swap -- remove fakesystemd -- install systemd systemd-libs
+RUN yum -y update; yum clean all; \
+(cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
+
+VOLUME [ "/sys/fs/cgroup" ]
+CMD ["/usr/sbin/init"]
+# end of systemd swap
+
+RUN yum install -y \
+    ${PKG_URL}/cloudstack-common-4.6.0-SNAPSHOT.el7.centos.x86_64.rpm \
+    ${PKG_URL}/cloudstack-awsapi-4.6.0-SNAPSHOT.el7.centos.x86_64.rpm \
+    ${PKG_URL}/cloudstack-management-4.6.0-SNAPSHOT.el7.centos.x86_64.rpm
+
+
