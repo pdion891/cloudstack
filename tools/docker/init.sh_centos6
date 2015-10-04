@@ -76,6 +76,6 @@ if [ $DEV_API ] && [ $INITIATED == false ]; then
 	RESTART_REQUIRED=true
 fi
 
-[ $RESTART_REQUIRED == true] &&	service cloudstack-management restart
+[ $RESTART_REQUIRED == true ] && service cloudstack-management restart
 
 tail -f /var/log/cloudstack/management/management-server.log
