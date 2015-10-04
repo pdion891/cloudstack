@@ -31,7 +31,7 @@ usage() {
 HYPERVISOR=$1
 
 INSTALL_SYS_TMPLT=/usr/share/cloudstack-common/scripts/storage/secondary/cloud-install-sys-tmplt
-EXPORT_PATH=/exports
+EXPORT_PATH=/exports/secondary
 
 if [ ! -d ${EXPORT_PATH} ]; then
 	echo "ERROR: Secondary Storage path '${EXPORT_PATH}' not found."
