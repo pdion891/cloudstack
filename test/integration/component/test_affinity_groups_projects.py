@@ -46,50 +46,44 @@ class Services:
              "firstname": "Test",
              "lastname": "User",
              "username": "doadmintest",
-#               Random characters are appended for unique
-#               username
-             "password": "password",
+             "password": "password"
           },
           "account": {
              "email": "newtest@test.com",
              "firstname": "Test",
              "lastname": "User",
              "username": "acc",
-#               Random characters are appended for unique
-#               username
-             "password": "password",
+             "password": "password"
           },
           "account_not_in_project": {
              "email": "newtest@test.com",
              "firstname": "Test",
              "lastname": "User",
              "username": "account_not_in_project",
-#               Random characters are appended for unique
-#               username
-             "password": "password",
+             "password": "password"
           },
           "project": {
-             "name": "Project"
+             "name": "Project",
+             "displaytext": "Project"
           },
           "project2": {
-             "name": "Project2"
+             "name": "Project2",
+             "displaytext": "Project2"
           },
           "service_offering": {
              "name": "Tiny Instance",
              "displaytext": "Tiny Instance",
              "cpunumber": 1,
              "cpuspeed": 100,
-#               in MHz
-             "memory": 64,
-#               In MBs
+             "memory": 64
           },
           "ostype": 'CentOS 5.3 (64-bit)',
           "host_anti_affinity": {
                 "name": "",
-                "type": "host anti-affinity",
+                "type": "host anti-affinity"
              },
           "virtual_machine" : {
-             "hypervisor" : "KVM",
+             "hypervisor" : "KVM"
           }
        }
 
@@ -103,8 +97,8 @@ class TestCreateAffinityGroup(cloudstackTestCase):
        cls.testClient = super(TestCreateAffinityGroup, cls).getClsTestClient()
        cls.api_client = cls.testClient.getApiClient()
        cls.services = Services().services
-#        #Get Zone, Domain and templates
 
+       #Get Zone, Domain and templates
        cls.rootdomain = get_domain(cls.api_client)
        cls.domain = Domain.create(cls.api_client, cls.services["domain"])
 
@@ -116,44 +110,64 @@ class TestCreateAffinityGroup(cloudstackTestCase):
        )
        
        cls.services["virtual_machine"]["zoneid"] = cls.zone.id
-
        cls.services["template"] = cls.template.id
        cls.services["zoneid"] = cls.zone.id
+       
+       cls.domain_admin_account = Account.create(
+          cls.api_client,
+          cls.services["domain_admin_account"],
+          domainid=cls.domain.id,
+          admin=True
+       )
 
-       cls._cleanup = []
+       cls.domain_api_client = cls.testClient.getUserApiClient(cls.domain_admin_account.name, cls.domain.name, 2)
 
        cls.account = Account.create(
           cls.api_client,
           cls.services["account"],
           domainid=cls.domain.id
+       )       
+
+       cls.account_api_client = cls.testClient.getUserApiClient(cls.account.name, cls.domain.name, 0)
+
+       cls.account_not_in_project = Account.create(
+          cls.api_client,
+          cls.services["account_not_in_project"],
+          domainid=cls.domain.id
        )
+
+       cls.account_not_in_project_api_client = cls.testClient.getUserApiClient(cls.account_not_in_project.name, cls.domain.name, 0)
 
        cls.project = Project.create(
           cls.api_client,
           cls.services["project"],
-          account=cls.account.name,
-          domainid=cls.account.domainid
+          account=cls.domain_admin_account.name,
+          domainid=cls.domain_admin_account.domainid
        )
        
-       cls._cleanup.append(cls.project)
-       cls._cleanup.append(cls.account)
-       
-       cls.debug("Created projectwith ID: %s" % cls.project.id)
+       cls.project2 = Project.create(
+          cls.api_client,
+          cls.services["project2"],
+          account=cls.domain_admin_account.name,
+          domainid=cls.domain_admin_account.domainid
+       )
 
-#        Add user to the project
+       cls.debug("Created project with ID: %s" % cls.project.id)
+       cls.debug("Created project2 with ID: %s" % cls.project2.id)
+
+       # Add user to the project
        cls.project.addAccount(
           cls.api_client,
           cls.account.name
        )
 
-       cls.services["account"] = cls.account.name
-       cls.services["domainid"] = cls.domain.id
-
        cls.service_offering = ServiceOffering.create(
           cls.api_client,
-          cls.services["service_offering"]
+          cls.services["service_offering"],
+          domainid=cls.account.domainid
        )
-       cls._cleanup.append(cls.service_offering)
+       
+       cls._cleanup = []
        return
 
     def setUp(self):
@@ -174,33 +188,35 @@ class TestCreateAffinityGroup(cloudstackTestCase):
        try:
           cls.api_client = super(TestCreateAffinityGroup, cls).getClsTestClient().getApiClient()
 #           #Clean up, terminate the created templates
+          cls.domain.delete(cls.api_client, cleanup=True)
           cleanup_resources(cls.api_client, cls._cleanup)
        except Exception as e:
           raise Exception("Warning: Exception during cleanup : %s" % e)
 
-    def create_aff_grp(self, api_client=None, aff_grp=None, projectid=None, aff_grp_name=None):
+    def create_aff_grp(self, api_client=None, aff_grp=None, aff_grp_name=None, projectid=None):
 
        if not api_client:
           api_client = self.api_client
-       if not aff_grp:
+       if aff_grp is None:
           aff_grp = self.services["host_anti_affinity"]
        if aff_grp_name is None:
           aff_grp["name"] = "aff_grp_" + random_gen(size=6)
        else:
           aff_grp["name"] = aff_grp_name
-
+       if projectid is None:
+          projectid = self.project.id
        try:
           return AffinityGroup.create(api_client, aff_grp, None, None, projectid)
        except Exception as e:
           raise Exception("Error: Creation of Affinity Group failed : %s" % e)
-      
+   
     @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
     def test_01_admin_create_aff_grp_for_project(self):
        """
-       Test create affinity group as admin for project
+       Test create affinity group as admin in project
        @return:
        """
-       aff_grp = self.create_aff_grp(aff_grp=self.services["host_anti_affinity"], projectid=self.project.id)
+       aff_grp = self.create_aff_grp()
        self.debug("Created Affinity Group: %s" % aff_grp.name)
        list_aff_grps = AffinityGroup.list(self.api_client, id=aff_grp.id)
        self.assert_(isinstance(list_aff_grps, list) and len(list_aff_grps) > 0)
@@ -214,51 +230,25 @@ class TestCreateAffinityGroup(cloudstackTestCase):
         Test create affinity group as domain admin for projects
         @return:
         """
-        
-        self.new_domain = Domain.create(self.api_client, self.services["new_domain"])
-        self.do_admin = Account.create(self.api_client, self.services["new_account"],
-                                      admin=True, domainid=self.new_domain.id)
-
-        domainapiclient = self.testClient.getUserApiClient(self.do_admin.name, self.new_domain.name, 2)
-        
-        project2 = Project.create(
-          domainapiclient,
-          self.services["project2"],
-          account=self.do_admin.name,
-          domainid=self.do_admin.domainid
-        )
-        project2.addAccount(domainapiclient, self.do_admin.name)
-       
-        self.cleanup.append(project2)
-        self.cleanup.append(self.do_admin)
-        self.cleanup.append(self.new_domain)
- 
-        aff_grp = self.create_aff_grp(api_client=domainapiclient, aff_grp=self.services["host_anti_affinity"],projectid=project2.id)
-        list_aff_grps = AffinityGroup.list(domainapiclient, id=aff_grp.id)
+        aff_grp = self.create_aff_grp(api_client=self.domain_api_client)
+        list_aff_grps = AffinityGroup.list(self.domain_api_client, id=aff_grp.id)
         self.assert_(isinstance(list_aff_grps, list) and len(list_aff_grps) > 0)
         self.assert_(list_aff_grps[0].id == aff_grp.id)
-        self.assert_(list_aff_grps[0].projectid == project2.id)
-        aff_grp.delete(domainapiclient)
+        self.assert_(list_aff_grps[0].projectid == self.project.id)
+        self.cleanup.append(aff_grp)
  
     @attr(tags=["vogxn", "simulator", "basic", "advanced"], required_hardware="false")
     def test_03_user_create_aff_grp_for_project(self):
         """
-        Test create affinity group as user  for projects
+        Test create affinity group as user for projects
         @return:
         """
-        self.user = Account.create(self.api_client, self.services["new_account"],
-                            domainid=self.domain.id)
-        self.cleanup.append(self.user)
-        self.project.addAccount(self.api_client, self.user.name)
-  
-        userapiclient = self.testClient.getUserApiClient(self.user.name, self.domain.name)
-        aff_grp = self.create_aff_grp(api_client=userapiclient, aff_grp=self.services["host_anti_affinity"],projectid=self.project.id)
+        aff_grp = self.create_aff_grp(api_client=self.account_api_client)
         list_aff_grps = AffinityGroup.list(self.api_client, id=aff_grp.id)
         self.assert_(isinstance(list_aff_grps, list) and len(list_aff_grps) > 0)
         self.assert_(list_aff_grps[0].id == aff_grp.id)
         self.assert_(list_aff_grps[0].projectid == self.project.id)
-        aff_grp.delete(userapiclient)
-  
+        self.cleanup.append(aff_grp)
   
     @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
     def test_4_user_create_aff_grp_existing_name_for_project(self):
@@ -266,16 +256,15 @@ class TestCreateAffinityGroup(cloudstackTestCase):
         Test create affinity group that exists (same name) for projects
         @return:
         """
-  
-        self.user = Account.create(self.api_client, self.services["new_account"],
-                            domainid=self.domain.id)
-        self.cleanup.append(self.user)
-        self.project.addAccount(self.api_client, self.user.name)
-         
-        aff_grp = self.create_aff_grp(aff_grp=self.services["host_anti_affinity"],projectid=self.project.id)
+        
+        failed_aff_grp = None
+        aff_grp = self.create_aff_grp(api_client=self.account_api_client)
         with self.assertRaises(Exception):
-           self.create_aff_grp(aff_grp=self.services["host_anti_affinity"],projectid=self.project.id,aff_grp_name = aff_grp.name)
-        aff_grp.delete(self.api_client)
+           failed_aff_grp = self.create_aff_grp(api_client=self.account_api_client,aff_grp_name = aff_grp.name)
+        
+        if failed_aff_grp:
+            self.cleanup.append(failed_aff_grp)
+        self.cleanup.append(aff_grp)
 
 # class TestListAffinityGroups(cloudstackTestCase):
 
