@@ -3428,7 +3428,7 @@ public class QueryManagerImpl extends ManagerBase implements QueryService, Confi
         List<Long> permittedAccounts = new ArrayList<Long>();
         Ternary<Long, Boolean, ListProjectResourcesCriteria> ternary = new Ternary<Long, Boolean, ListProjectResourcesCriteria>(domainId, isRecursive, null);
 
-        _accountMgr.buildACLSearchParameters(caller, affinityGroupId, accountName, projectId, permittedAccounts, ternary, listAll, true);
+        _accountMgr.buildACLSearchParameters(caller, affinityGroupId, accountName, projectId, permittedAccounts, ternary, listAll, false);
 
         domainId = ternary.first();
         isRecursive = ternary.second();

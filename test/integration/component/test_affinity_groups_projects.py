@@ -186,8 +186,7 @@ class TestCreateAffinityGroup(cloudstackTestCase):
     @classmethod
     def tearDownClass(cls):
        try:
-          cls.api_client = super(TestCreateAffinityGroup, cls).getClsTestClient().getApiClient()
-#           #Clean up, terminate the created templates
+          #Clean up, terminate the created templates
           cls.domain.delete(cls.api_client, cleanup=True)
           cleanup_resources(cls.api_client, cls._cleanup)
        except Exception as e:
@@ -266,254 +265,263 @@ class TestCreateAffinityGroup(cloudstackTestCase):
             self.cleanup.append(failed_aff_grp)
         self.cleanup.append(aff_grp)
 
-# class TestListAffinityGroups(cloudstackTestCase):
+class TestListAffinityGroups(cloudstackTestCase):
 
-#     @classmethod
-#     def setUpClass(cls):
-#         cls.testClient = super(TestListAffinityGroups, cls).getClsTestClient()
-#         cls.api_client = cls.testClient.getApiClient()
+    @classmethod
+    def setUpClass(cls):
+       cls.testClient = super(TestListAffinityGroups, cls).getClsTestClient()
+       cls.api_client = cls.testClient.getApiClient()
+       cls.services = Services().services
 
-#         cls.services = Services().services
-# #         #Get Zone, Domain and templates
-#         cls.domain = get_domain(cls.api_client)
-#         cls.zone = get_zone(cls.api_client, cls.testClient.getZoneForTests())
+       #Get Zone, Domain and templates
+       cls.rootdomain = get_domain(cls.api_client)
+       cls.domain = Domain.create(cls.api_client, cls.services["domain"])
 
-#         cls.template = get_template(
-#            cls.api_client,
-#            cls.zone.id,
-#            cls.services["ostype"]
-#         )
-#         cls.services["virtual_machine"]["zoneid"] = cls.zone.id
+       cls.zone = get_zone(cls.api_client, cls.testClient.getZoneForTests())
+       cls.template = get_template(
+          cls.api_client,
+          cls.zone.id,
+          cls.services["ostype"]
+       )
+       
+       cls.services["virtual_machine"]["zoneid"] = cls.zone.id
+       cls.services["template"] = cls.template.id
+       cls.services["zoneid"] = cls.zone.id
+       
+       cls.domain_admin_account = Account.create(
+          cls.api_client,
+          cls.services["domain_admin_account"],
+          domainid=cls.domain.id,
+          admin=True
+       )
 
-#         cls.services["template"] = cls.template.id
-#         cls.services["zoneid"] = cls.zone.id
+       cls.domain_api_client = cls.testClient.getUserApiClient(cls.domain_admin_account.name, cls.domain.name, 2)
 
-#         cls._cleanup = []
+       cls.account = Account.create(
+          cls.api_client,
+          cls.services["account"],
+          domainid=cls.domain.id
+       )       
 
-#         cls.account = Account.create(
-#            cls.api_client,
-#            cls.services["account"],
-#            domainid=cls.domain.id
-#         )
+       cls.account_api_client = cls.testClient.getUserApiClient(cls.account.name, cls.domain.name, 0)
 
-#         cls.project = Project.create(
-#            cls.api_client,
-#            cls.services["project"],
-#            account=cls.account.name,
-#            domainid=cls.account.domainid
-#         )
-        
-#         cls._cleanup.append(cls.project)
-#         cls._cleanup.append(cls.account)
-        
-#         cls.debug("Created project with domain admin with ID: %s" % cls.project.id)
-#         #        Add user to the project
-#         cls.project.addAccount(
-#            cls.api_client,
-#            cls.account.name
-#         )
+       cls.account_not_in_project = Account.create(
+          cls.api_client,
+          cls.services["account_not_in_project"],
+          domainid=cls.domain.id
+       )
 
-#         cls.services["account"] = cls.account.name
-#         cls.services["domainid"] = cls.domain.id
+       cls.account_not_in_project_api_client = cls.testClient.getUserApiClient(cls.account_not_in_project.name, cls.domain.name, 0)
 
-#         cls.service_offering = ServiceOffering.create(
-#            cls.api_client,
-#            cls.services["service_offering"]
-#         )
-#         cls._cleanup.append(cls.service_offering)
-# #         Create multiple Affinity Groups
-#         return
+       cls.project = Project.create(
+          cls.api_client,
+          cls.services["project"],
+          account=cls.domain_admin_account.name,
+          domainid=cls.domain_admin_account.domainid
+       )
+       
+       cls.project2 = Project.create(
+          cls.api_client,
+          cls.services["project2"],
+          account=cls.domain_admin_account.name,
+          domainid=cls.domain_admin_account.domainid
+       )
 
-#     def setUp(self):
-#         self.apiclient = self.testClient.getApiClient()
-#         self.dbclient = self.testClient.getDbConnection()
-#         self.aff_grp = []
-#         self.cleanup = []
+       cls.debug("Created project with ID: %s" % cls.project.id)
+       cls.debug("Created project2 with ID: %s" % cls.project2.id)
 
-#     def tearDown(self):
-#         try:
-#            self.api_client = super(TestListAffinityGroups, self).getClsTestClient().getApiClient()
-# #            #Clean up, terminate the created templates
-#            cleanup_resources(self.api_client, self.cleanup)
-#         except Exception as e:
-#            raise Exception("Warning: Exception during cleanup : %s" % e)
+       # Add user to the project
+       cls.project.addAccount(
+          cls.api_client,
+          cls.account.name
+       )
 
-#     @classmethod
-#     def tearDownClass(cls):
-#         try:
-#            cls.api_client = super(TestListAffinityGroups, cls).getClsTestClient().getApiClient()
-# #            #Clean up, terminate the created templates
-#            cleanup_resources(cls.api_client, cls._cleanup)
-#         except Exception as e:
-#            raise Exception("Warning: Exception during cleanup : %s" % e)
+       cls.service_offering = ServiceOffering.create(
+          cls.api_client,
+          cls.services["service_offering"],
+          domainid=cls.account.domainid
+       )
+       
+       cls._cleanup = []
+       return
 
-#     def create_aff_grp(self, api_client=None, aff_grp=None):
+    def setUp(self):
+       self.apiclient = self.testClient.getApiClient()
+       self.dbclient = self.testClient.getDbConnection()
+       self.cleanup = []
 
-#         if api_client == None:
-#            api_client = self.api_client
-#         if aff_grp == None:
-#            aff_grp = self.services["host_anti_affinity"]
+    def tearDown(self):
+       try:
+#            #Clean up, terminate the created instance, volumes and snapshots
+          cleanup_resources(self.api_client, self.cleanup)
+       except Exception as e:
+          raise Exception("Warning: Exception during cleanup : %s" % e)
+       return
 
+    @classmethod
+    def tearDownClass(cls):
+       try:
+          cls.domain.delete(cls.api_client, cleanup=True)
+          cleanup_resources(cls.api_client, cls._cleanup)
+       except Exception as e:
+          raise Exception("Warning: Exception during cleanup : %s" % e)
 
-#         aff_grp["name"] = "aff_grp_" + random_gen(size=6)
+    def create_aff_grp(self, api_client=None, aff_grp=None, aff_grp_name=None, projectid=None):
 
-#         try:
-#            aff_grp = AffinityGroup.create(api_client,aff_grp, None, None, self.project.id)
-#            self.aff_grp.append(aff_grp)
-#            return aff_grp
-#         except Exception as e:
-#            raise Exception("Error: Creation of Affinity Group failed : %s" %e)
+       if not api_client:
+          api_client = self.api_client
+       if aff_grp is None:
+          aff_grp = self.services["host_anti_affinity"]
+       if aff_grp_name is None:
+          aff_grp["name"] = "aff_grp_" + random_gen(size=6)
+       else:
+          aff_grp["name"] = aff_grp_name
+       if projectid is None:
+          projectid = self.project.id
+       try:
+          return AffinityGroup.create(api_client, aff_grp, None, None, projectid)
+       except Exception as e:
+          raise Exception("Error: Creation of Affinity Group failed : %s" % e)
 
-#     def create_vm_in_aff_grps(self, ag_list):
-#         self.debug('Creating VM in AffinityGroup=%s' % ag_list[0])
-#         vm = VirtualMachine.create(
-#                 self.api_client,
-#                 self.services["virtual_machine"],
-#                 projectid=self.project.id,
-#                 templateid=self.template.id,
-#                 serviceofferingid=self.service_offering.id,
-#                 affinitygroupnames=ag_list
-#               )
-#         self.debug('Created VM=%s in Affinity Group=%s' % (vm.id, ag_list[0]))
+    def create_vm_in_aff_grps(self, api_client=None, ag_list=[], projectid=None):
+        self.debug('Creating VM in AffinityGroups=%s' % ag_list)
 
-#         list_vm = list_virtual_machines(self.api_client, id=vm.id)
-#         self.assertEqual(isinstance(list_vm, list), True,
-#                      "Check list response returns a valid list")
-#         self.assertNotEqual(len(list_vm),0,
-#                         "Check VM available in List Virtual Machines")
-#         vm_response = list_vm[0]
-#         self.assertEqual(vm_response.state, 'Running',
-#                      msg="VM is not in Running state")
-#         return vm, vm_response.hostid
+        if api_client is None:
+           api_client = self.api_client
+        if projectid is None:
+           projectid = self.project.id
 
-#     @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
-#     def test_01_list_aff_grps_for_vm(self):
-#         """
-#           List affinity group for a vm for projects
-#         """
+        vm = VirtualMachine.create(
+                api_client,
+                self.services["virtual_machine"],
+                projectid=projectid,
+                templateid=self.template.id,
+                serviceofferingid=self.service_offering.id,
+                affinitygroupnames=ag_list
+              )
+        self.debug('Created VM=%s in Affinity Group=%s' % (vm.id, tuple(ag_list)))
 
-#         self.create_aff_grp(aff_grp=self.services["host_anti_affinity"])
-#         list_aff_grps = AffinityGroup.list(self.api_client)
+        list_vm = list_virtual_machines(api_client, id=vm.id, projectid=projectid)
+        self.assertEqual(isinstance(list_vm, list), True,"Check list response returns a valid list")
+        self.assertNotEqual(len(list_vm),0, "Check VM available in List Virtual Machines")
+        vm_response = list_vm[0]
+        self.assertEqual(vm_response.state, 'Running',msg="VM is not in Running state")
+        self.assertEqual(vm_response.projectid, projectid,msg="VM is not in project")
+        return vm, vm_response.hostid
 
-#         vm, hostid = self.create_vm_in_aff_grps([self.aff_grp[0].name])
-#         list_aff_grps = AffinityGroup.list(self.api_client,virtualmachineid=vm.id)
+    @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
+    def test_01_list_aff_grps_for_vm(self):
+        """
+          List affinity group for a vm for projects
+        """
+        aff_grps = []
+        aff_grps.append(self.create_aff_grp(self.domain_api_client, projectid=self.project.id))
 
-#         self.assertEqual(list_aff_grps[0].name, self.aff_grp[0].name,"Listing Affinity Group by VM id failed")
-#         self.assertEqual(list_aff_grps[0].projectid, self.project.id,"Listing Affinity Group by VM id failed")
+        vm, hostid = self.create_vm_in_aff_grps(self.account_api_client,ag_list=[aff_grps[0].name])
+        list_aff_grps = AffinityGroup.list(self.api_client,virtualmachineid=vm.id)
 
-#         vm.delete(self.api_client)
-# #         #Wait for expunge interval to cleanup VM
-#         wait_for_cleanup(self.apiclient, ["expunge.delay", "expunge.interval"])
+        self.assertEqual(list_aff_grps[0].name, aff_grps[0].name,"Listing Affinity Group by VM id failed")
+        self.assertEqual(list_aff_grps[0].projectid, self.project.id,"Listing Affinity Group by VM id failed, vm was not in project")
 
-#         self.aff_grp[0].delete(self.api_client)
+        vm.delete(self.api_client)
+        #Wait for expunge interval to cleanup VM
+        wait_for_cleanup(self.apiclient, ["expunge.delay", "expunge.interval"])
+        self.cleanup.append(aff_grps[0])
 
-#     @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
-#     def test_02_list_multiple_aff_grps_for_vm(self):
-#         """
-#           List multiple affinity groups associated with a vm for projects
-#         """
+    @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
+    def test_02_list_multiple_aff_grps_for_vm(self):
+        """
+          List multiple affinity groups associated with a vm for projects
+        """
 
-#         aff_grp_01 = self.create_aff_grp(aff_grp=self.services["host_anti_affinity"])
-#         aff_grp_02 = self.create_aff_grp(aff_grp=self.services["host_anti_affinity"])
+        aff_grp_01 = self.create_aff_grp(self.account_api_client)
+        aff_grp_02 = self.create_aff_grp(self.account_api_client)
 
-#         aff_grps_names = [self.aff_grp[0].name, self.aff_grp[1].name]
-#         vm, hostid = self.create_vm_in_aff_grps(aff_grps_names)
-#         list_aff_grps = AffinityGroup.list(self.api_client,
-#                                     virtualmachineid=vm.id)
+        aff_grps_names = [aff_grp_01.name, aff_grp_02.name]
+        vm, hostid = self.create_vm_in_aff_grps(ag_list=aff_grps_names)
+        list_aff_grps = AffinityGroup.list(self.api_client,
+                                    virtualmachineid=vm.id)
 
-#         list_aff_grps_names = [list_aff_grps[0].name, list_aff_grps[1].name]
+        list_aff_grps_names = [list_aff_grps[0].name, list_aff_grps[1].name]
 
-#         aff_grps_names.sort()
-#         list_aff_grps_names.sort()
-#         self.assertEqual(aff_grps_names, list_aff_grps_names,
-#                      "One of the Affinity Groups is missing %s"
-#                      %list_aff_grps_names)
+        aff_grps_names.sort()
+        list_aff_grps_names.sort()
+        self.assertEqual(aff_grps_names, list_aff_grps_names,"One of the Affinity Groups is missing %s" % list_aff_grps_names)
 
-#         vm.delete(self.api_client)
-# #         #Wait for expunge interval to cleanup VM
-#         wait_for_cleanup(self.apiclient, ["expunge.delay", "expunge.interval"])
+        vm.delete(self.api_client)
+        #Wait for expunge interval to cleanup VM
+        wait_for_cleanup(self.apiclient, ["expunge.delay", "expunge.interval"])
+        self.cleanup.append(aff_grp_01)
+        self.cleanup.append(aff_grp_02)
 
-#         aff_grp_01.delete(self.api_client)
-#         aff_grp_02.delete(self.api_client)
+    @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
+    def test_03_list_aff_grps_by_id(self):
+        """
+          List affinity groups by id for projects
+        """
+        aff_grp = self.create_aff_grp(self.account_api_client)
+        list_aff_grps = AffinityGroup.list(self.account_api_client, id=aff_grp.id, projectid=self.project.id)
+        self.assertEqual(list_aff_grps[0].id, aff_grp.id,"Listing Affinity Group by id failed")
+        with self.assertRaises(Exception):
+           AffinityGroup.list(self.account_not_in_project_api_client, id=aff_grp.id, projectid=self.project.id)
+        self.cleanup.append(aff_grp)
 
-#     @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
-#     def test_03_list_aff_grps_by_id(self):
-#         """
-#           List affinity groups by id for projects
-#         """
+    @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
+    def test_04_list_aff_grps_by_name(self):
+        """
+           List Affinity Groups by name for projects
+        """
+        aff_grp = self.create_aff_grp(self.account_api_client)
+        list_aff_grps = AffinityGroup.list(self.account_api_client, name=aff_grp.name, projectid=self.project.id)
+        self.assertEqual(list_aff_grps[0].name, aff_grp.name,"Listing Affinity Group by name failed")
+        with self.assertRaises(Exception):
+           AffinityGroup.list(self.account_not_in_project_api_client, id=aff_grp.id, projectid=self.project.id)
+        self.cleanup.append(aff_grp)
 
-#         self.create_aff_grp(aff_grp=self.services["host_anti_affinity"])
-#         list_aff_grps = AffinityGroup.list(self.api_client, projectid=self.project.id)
-#         list_aff_grps = AffinityGroup.list(self.api_client, id=list_aff_grps[0].id)
-#         self.assertEqual(list_aff_grps[0].name, self.aff_grp[0].name,
-#                      "Listing Affinity Group by VM id failed")
+    @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
+    def test_05_list_aff_grps_by_non_existing_id(self):
+        """
+           List Affinity Groups by non-existing id for projects
+        """
+        aff_grp = self.create_aff_grp(self.account_api_client)
+        list_aff_grps = AffinityGroup.list(self.account_api_client, id=1234, projectid=self.project.id)
+        self.assertEqual(list_aff_grps, None, "Listing Affinity Group by non-existing id succeeded.")
+        self.cleanup.append(aff_grp)
 
-#         self.aff_grp[0].delete(self.api_client)
+    @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
+    def test_06_list_aff_grps_by_non_existing_name(self):
+        """
+           List Affinity Groups by non-existing name for projects
+        """
 
-#     @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
-#     def test_04_list_aff_grps_by_name(self):
-#         """
-#            List Affinity Groups by name for projects
-#         """
+        aff_grp = self.create_aff_grp(self.account_api_client)
+        list_aff_grps = AffinityGroup.list(self.account_api_client, name="inexistantName", projectid=self.project.id)
+        self.assertEqual(list_aff_grps, None, "Listing Affinity Group by non-existing name succeeded.")
+        self.cleanup.append(aff_grp)
 
-#         self.create_aff_grp(aff_grp=self.services["host_anti_affinity"])
-#         list_aff_grps = AffinityGroup.list(self.api_client,name=self.aff_grp[0].name, projectid=self.project.id)
-#         self.assertEqual(list_aff_grps[0].name, self.aff_grp[0].name,
-#                      "Listing Affinity Group by name failed")
+    @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
+    def test_07_list_all_vms_in_aff_grp(self):
+        """
+          List affinity group should list all for a vms associated with that group for projects
+        """
 
-#         self.aff_grp[0].delete(self.api_client)
+        aff_grp = self.create_aff_grp(self.account_api_client)
 
-#     @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
-#     def test_05_list_aff_grps_by_non_existing_id(self):
-#         """
-#            List Affinity Groups by non-existing id for projects
-#         """
+        vm1, hostid1 = self.create_vm_in_aff_grps(ag_list=[aff_grp.name])
+        vm2, hostid2 = self.create_vm_in_aff_grps(ag_list=[aff_grp.name])
+        list_aff_grps = AffinityGroup.list(self.api_client, id=aff_grp.id, projectid=self.project.id)
 
-#         self.create_aff_grp(aff_grp=self.services["host_anti_affinity"])
-#         list_aff_grps = AffinityGroup.list(self.api_client,id=1234, projectid=self.project.id)
-#         self.assertEqual(list_aff_grps, None,
-#                      "Listing Affinity Group by non-existing id succeeded.")
+        self.assertEqual(list_aff_grps[0].name, aff_grp.name, "Listing Affinity Group by id failed")
 
-#         self.aff_grp[0].delete(self.api_client)
-
-#     @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
-#     def test_06_list_aff_grps_by_non_existing_name(self):
-#         """
-#            List Affinity Groups by non-existing name for projects
-#         """
-
-#         self.create_aff_grp(aff_grp=self.services["host_anti_affinity"])
-#         list_aff_grps = AffinityGroup.list(self.api_client,name="NonexistingName", projectid=self.project.id)
-#         self.assertEqual(list_aff_grps, None,
-#                      "Listing Affinity Group by non-existing name succeeded.")
-
-#         self.aff_grp[0].delete(self.api_client)
-
-#     @attr(tags=["simulator", "basic", "advanced"], required_hardware="false")
-#     def test_07_list_all_vms_in_aff_grp(self):
-#         """
-#           List affinity group should list all for a vms associated with that group for projects
-#         """
-
-#         self.create_aff_grp(aff_grp=self.services["host_anti_affinity"])
-
-#         vm, hostid = self.create_vm_in_aff_grps([self.aff_grp[0].name])
-#         list_aff_grps = AffinityGroup.list(self.api_client, id=self.aff_grp[0].id, projectid=self.project.id)
-
-#         self.assertEqual(list_aff_grps[0].name, self.aff_grp[0].name,
-#                      "Listing Affinity Group by id failed")
-
-#         self.assertEqual(list_aff_grps[0].virtualmachineIds[0], vm.id,
-#         "List affinity group response.virtualmachineIds for group: %s doesn't contain hostid : %s associated with the group"
-#            %(self.aff_grp[0].name, vm.id)
-#            )
+        self.assertEqual(list_aff_grps[0].virtualmachineIds[0], vm1.id, "List affinity group response.virtualmachineIds for group: %s doesn't contain vmid : %s" % (aff_grp.name, vm1.id))
+        self.assertEqual(list_aff_grps[0].virtualmachineIds[1], vm2.id, "List affinity group response.virtualmachineIds for group: %s doesn't contain vmid : %s" % (aff_grp.name, vm2.id))
 
 
-#         vm.delete(self.api_client)
-#         #Wait for expunge interval to cleanup VM
-#         wait_for_cleanup(self.apiclient, ["expunge.delay", "expunge.interval"])
-
-#         self.aff_grp[0].delete(self.api_client)
+        vm1.delete(self.api_client)
+        vm2.delete(self.api_client)
+        #Wait for expunge interval to cleanup VM
+        wait_for_cleanup(self.apiclient, ["expunge.delay", "expunge.interval"])
+        self.cleanup.append(aff_grp)
  
 # class TestDeleteAffinityGroups(cloudstackTestCase):
 
