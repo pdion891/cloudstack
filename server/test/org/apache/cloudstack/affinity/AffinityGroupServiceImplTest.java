@@ -174,9 +174,7 @@ public class AffinityGroupServiceImplTest {
         when(_acctMgr.finalizeOwner((Account)anyObject(), anyString(), anyLong(), anyLong())).thenReturn(acct);
         when(_groupDao.isNameInUse(anyLong(), anyLong(), eq(AFFINITY_GROUP_NAME))).thenReturn(false);
         CreateAffinityGroupCmd mockCreateAffinityGroupCmd = Mockito.mock(CreateAffinityGroupCmd.class);
-        when(mockCreateAffinityGroupCmd.getAccountName()).thenReturn(ACCOUNT_NAME);
         when(mockCreateAffinityGroupCmd.getProjectId()).thenReturn(PROJECT_ID);
-        when(mockCreateAffinityGroupCmd.getDomainId()).thenReturn(DOMAIN_ID);
         when(mockCreateAffinityGroupCmd.getAffinityGroupName()).thenReturn(AFFINITY_GROUP_NAME);
         when(mockCreateAffinityGroupCmd.getAffinityGroupType()).thenReturn("mock");
         when(mockCreateAffinityGroupCmd.getDescription()).thenReturn("affinity group one");
