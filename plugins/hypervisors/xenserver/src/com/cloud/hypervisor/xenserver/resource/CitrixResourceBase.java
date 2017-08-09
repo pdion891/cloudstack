@@ -1889,6 +1889,12 @@ public abstract class CitrixResourceBase implements ServerResource, HypervisorRe
                     platform.put("cores-per-socket", coresPerSocket);
                     vm.setPlatform(conn, platform);
                 }
+                final String nested = details.get("nested");
+                if (coresPerSocket != null) {
+                    final Map<String, String> platform = vm.getPlatform(conn);
+                    platform.put("exp-nested-hvm", nested);
+                    vm.setPlatform(conn, platform);
+                }
             }
             if (!BootloaderType.CD.equals(vmSpec.getBootloader())) {
                 final String xenservertoolsversion = details.get("hypervisortoolsversion");
